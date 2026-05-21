@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilhar Matemático</title>
+
+<style>
+
+body {
+    margin: 0;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    margin: auto;
+    background: black;
+}
+
+#controls {
+
+    position: fixed;
+
+    bottom: 20px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    display: flex;
+    gap: 15px;
+
+    z-index: 10;
+}
+
+button {
+
+    width: 90px;
+    height: 60px;
+
+    font-size: 22px;
+
+    background: #222;
+    color: white;
+
+    border: 2px solid white;
+
+    border-radius: 12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+
+    <button onclick="increaseP()">P +</button>
+    <button onclick="decreaseP()">P -</button>
+
+    <button onclick="increaseQ()">Q +</button>
+    <button onclick="decreaseQ()">Q -</button>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+// ======================================================
+// CANVAS
+// ======================================================
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 1000;
+canvas.height = 900;
+
+// ======================================================
+// SALA
+// ======================================================
+const ROOM_SIZE = 600;
+
+const ROOM_X = 200;
+const ROOM_Y = 220;
+
+const WALL_OFFSET = 3;
+
+// Centro
+const centerX = ROOM_X + ROOM_SIZE / 2;
+const centerY = ROOM_Y + ROOM_SIZE / 2;
+
+// ======================================================
+// MATEMÁTICA
+// tan(theta) = p/q
+// ======================================================
+let p = 1;
+let q = 2;
+
+// ======================================================
+// REFLEXÕES
+// ======================================================
+let reflections = 0;
+
+// ======================================================
+// VELOCIDADE
+// ======================================================
+const speed = 5;
+
+// ======================================================
+// LASER
+// ======================================================
+let x, y;
+let dx, dy;
+let theta;
+
+let points = [];
+
+// ======================================================
+// RESET
+// ======================================================
+function resetLaser() {
+
+    x = centerX;
+    y = centerY;
+
+    theta = Math.atan(p / q);
+
+    dx = Math.cos(theta) * speed;
+    dy = -Math.sin(theta) * speed;
+
+    points = [];
+
+    reflections = 0;
+}
+
+resetLaser();
+
+// ======================================================
+// CONTROLES MOBILE
+// ======================================================
+function increaseP() {
+
+    if (p < q) {
+
+        p++;
+        resetLaser();
+    }
+}
+
+function decreaseP() {
+
+    if (p > 1) {
+
+        p--;
+        resetLaser();
+    }
+}
+
+function increaseQ() {
+
+    q++;
+    resetLaser();
+}
+
+function decreaseQ() {
+
+    if (q > p) {
+
+        q--;
+        resetLaser();
+    }
+}
+
+// ======================================================
+// CONTROLES TECLADO
+// ======================================================
+document.addEventListener("keydown", (event) => {
+
+    if (event.key === "ArrowRight") {
+        increaseP();
+    }
+
+    if (event.key === "ArrowLeft") {
+        decreaseP();
+    }
+
+    if (event.key === "ArrowUp") {
+        increaseQ();
+    }
+
+    if (event.key === "ArrowDown") {
+        decreaseQ();
+    }
+});
+
+// ======================================================
+// LOOP
+// ======================================================
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    // ==================================================
+    // MOVIMENTO
+    // ==================================================
+    points.push([x, y]);
+
+    x += dx;
+    y += dy;
+
+    // ==================================================
+    // LIMITES
+    // ==================================================
+    const leftWall = ROOM_X + WALL_OFFSET;
+    const rightWall = ROOM_X + ROOM_SIZE - WALL_OFFSET;
+
+    const topWall = ROOM_Y + WALL_OFFSET;
+    const bottomWall = ROOM_Y + ROOM_SIZE - WALL_OFFSET;
+
+    // ==================================================
+    // REFLEXÕES
+    // ==================================================
+    let collided = false;
+
+    // Esquerda
+    if (x <= leftWall) {
+
+        x = leftWall;
+        dx *= -1;
+
+        collided = true;
+    }
+
+    // Direita
+    if (x >= rightWall) {
+
+        x = rightWall;
+        dx *= -1;
+
+        collided = true;
+    }
+
+    // Cima
+    if (y <= topWall) {
+
+        y = topWall;
+        dy *= -1;
+
+        collided = true;
+    }
+
+    // Baixo
+    if (y >= bottomWall) {
+
+        y = bottomWall;
+        dy *= -1;
+
+        collided = true;
+    }
+
+    // Conta apenas UMA reflexão
+    if (collided) {
+        reflections++;
+    }
+
+    // ==================================================
+    // PREVISÃO MATEMÁTICA
+    // ==================================================
+
+    // IMPORTANTÍSSIMO:
+    //
+    // A fórmula clássica:
+    //
+    // p + q - 1
+    //
+    // conta o número de colisões
+    // ATÉ atingir um vértice no plano desdobrado.
+    //
+    // Nosso simulador:
+    // - começa no centro;
+    // - conta colisões reais;
+    // - trata canto como UMA colisão.
+    //
+    // Então a convenção consistente aqui é:
+    //
+    // p + q - 1
+    //
+    // exceto no caso diagonal p=q.
+    //
+    let predictedReflections;
+
+    if (p === q) {
+
+        predictedReflections = 1;
+
+    } else {
+
+        predictedReflections = p + q - 1;
+    }
+
+    // ==================================================
+    // DESENHO
+    // ==================================================
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Header
+    ctx.fillStyle = "rgb(25,25,25)";
+    ctx.fillRect(0, 0, canvas.width, 170);
+
+    // Sala
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+
+    ctx.strokeRect(
+        ROOM_X,
+        ROOM_Y,
+        ROOM_SIZE,
+        ROOM_SIZE
+    );
+
+    // Centro
+    ctx.fillStyle = "lime";
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trajetória
+    if (points.length > 1) {
+
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+
+        ctx.moveTo(points[0][0], points[0][1]);
+
+        for (let i = 1; i < points.length; i++) {
+
+            ctx.lineTo(
+                points[i][0],
+                points[i][1]
+            );
+        }
+
+        ctx.stroke();
+    }
+
+    // ==================================================
+    // TEXTOS
+    // ==================================================
+    ctx.fillStyle = "white";
+    ctx.font = "28px Arial";
+
+    // Razão
+    ctx.fillText(
+        `tan(theta) = ${p}/${q}`,
+        40,
+        50
+    );
+
+    // Ângulo
+    const angleDeg = (theta * 180 / Math.PI).toFixed(4);
+
+    ctx.fillText(
+        `Theta = ${angleDeg}°`,
+        320,
+        50
+    );
+
+    // Reflexões reais
+    ctx.fillText(
+        `Reflexoes reais = ${reflections}`,
+        600,
+        50
+    );
+
+    // Previsão
+    ctx.fillText(
+        `Previsao teorica = ${predictedReflections}`,
+        40,
+        100
+    );
+
+    // Controles
+    ctx.fillText(
+        `←→ muda p | ↑↓ muda q`,
+        320,
+        100
+    );
+
+    // Explicação
+    ctx.font = "20px Arial";
+
+    ctx.fillText(
+        `A simulação contabiliza reflexões físicas na sala original, enquanto a teoria utiliza o plano desdobrado.`,
+        40,
+        150
+    );
+}
+
+animate();
+
+</script>
+
+</body>
+</html>
