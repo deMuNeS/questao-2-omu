@@ -299,7 +299,7 @@ function animate() {
 
     } else {
 
-        predictedReflections = p + q - 1;
+        predictedReflections = p + q;
     }
 
     // ==================================================
@@ -396,11 +396,6 @@ function animate() {
     // Explicação
     ctx.font = "20px Arial";
 
-    ctx.fillText(
-        `A simulação contabiliza reflexões físicas na sala original, enquanto a teoria utiliza o plano desdobrado.`,
-        40,
-        150
-    );
 }
 
 animate();
