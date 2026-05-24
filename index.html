@@ -3,407 +3,237 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>questão 2 omu</title>
+<title>Sala de Espelhos</title>
 
 <style>
+    body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-body {
-    margin: 0;
-    background: black;
-    color: white;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
-}
+    h1 {
+        margin-top: 10px;
+        font-size: 22px;
+        text-align: center;
+    }
 
-canvas {
-    display: block;
-    margin: auto;
-    background: black;
-}
+    #info {
+        margin: 10px;
+        text-align: center;
+        line-height: 1.5;
+    }
 
-#controls {
+    canvas {
+        background: black;
+        border: 2px solid white;
+        touch-action: none;
+    }
 
-    position: fixed;
+    .controls {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
 
-    bottom: 20px;
-    left: 50%;
+    button {
+        padding: 12px 20px;
+        font-size: 18px;
+        border: none;
+        border-radius: 10px;
+        background: #333;
+        color: white;
+    }
 
-    transform: translateX(-50%);
-
-    display: flex;
-    gap: 15px;
-
-    z-index: 10;
-}
-
-button {
-
-    width: 90px;
-    height: 60px;
-
-    font-size: 22px;
-
-    background: #222;
-    color: white;
-
-    border: 2px solid white;
-
-    border-radius: 12px;
-}
-
+    button:active {
+        background: #555;
+    }
 </style>
 </head>
 
 <body>
 
-<div id="controls">
+<h1>Sala de Espelhos</h1>
 
-    <button onclick="increaseP()">P +</button>
-    <button onclick="decreaseP()">P -</button>
+<div id="info"></div>
 
-    <button onclick="increaseQ()">Q +</button>
-    <button onclick="decreaseQ()">Q -</button>
+<canvas id="canvas" width="600" height="600"></canvas>
 
+<div class="controls">
+    <button onclick="changeX(-1)">x -</button>
+    <button onclick="changeX(1)">x +</button>
+
+    <button onclick="changeY(-1)">y -</button>
+    <button onclick="changeY(1)">y +</button>
 </div>
-
-<canvas id="canvas"></canvas>
 
 <script>
 
-// ======================================================
-// CANVAS
-// ======================================================
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const info = document.getElementById("info");
 
-canvas.width = 1000;
-canvas.height = 900;
+const size = 500;
+const offset = 50;
 
-// ======================================================
-// SALA
-// ======================================================
-const ROOM_SIZE = 600;
+const centerX = offset + size / 2;
+const centerY = offset + size / 2;
 
-const ROOM_X = 200;
-const ROOM_Y = 220;
+let speed = 4;
 
-const WALL_OFFSET = 3;
+let laserX, laserY;
+let dx, dy;
 
-// Centro
-const centerX = ROOM_X + ROOM_SIZE / 2;
-const centerY = ROOM_Y + ROOM_SIZE / 2;
-
-// ======================================================
-// MATEMÁTICA
-// tan(theta) = p/q
-// ======================================================
-let p = 1;
-let q = 2;
-
-// ======================================================
-// REFLEXÕES
-// ======================================================
 let reflections = 0;
 
-// ======================================================
-// VELOCIDADE
-// ======================================================
-const speed = 5;
+// FRAÇÃO EXATA
+let xValue = 1;
+let yValue = 2;
 
-// ======================================================
-// LASER
-// ======================================================
-let x, y;
-let dx, dy;
-let theta;
+function gcd(a, b) {
+    while (b !== 0) {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
 
-let points = [];
+function simplifyFraction() {
 
-// ======================================================
-// RESET
-// ======================================================
+    const divisor = gcd(xValue, yValue);
+
+    xValue /= divisor;
+    yValue /= divisor;
+}
+
+function changeX(delta) {
+
+    xValue += delta;
+
+    if (xValue < 1) xValue = 1;
+
+    simplifyFraction();
+    resetLaser();
+}
+
+function changeY(delta) {
+
+    yValue += delta;
+
+    if (yValue < 1) yValue = 1;
+
+    simplifyFraction();
+    resetLaser();
+}
+
 function resetLaser() {
 
-    x = centerX;
-    y = centerY;
+    laserX = centerX;
+    laserY = centerY;
 
-    theta = Math.atan(p / q);
+    // tan(theta) = x/y
+    const angle = Math.atan(xValue / yValue);
 
-    dx = Math.cos(theta) * speed;
-    dy = -Math.sin(theta) * speed;
-
-    points = [];
+    dx = Math.cos(angle) * speed;
+    dy = -Math.sin(angle) * speed;
 
     reflections = 0;
 }
 
 resetLaser();
 
-// ======================================================
-// CONTROLES MOBILE
-// ======================================================
-function increaseP() {
+function update() {
 
-    if (p < q) {
+    laserX += dx;
+    laserY += dy;
 
-        p++;
-        resetLaser();
-    }
-}
+    let hitVertical = false;
+    let hitHorizontal = false;
 
-function decreaseP() {
-
-    if (p > 1) {
-
-        p--;
-        resetLaser();
-    }
-}
-
-function increaseQ() {
-
-    q++;
-    resetLaser();
-}
-
-function decreaseQ() {
-
-    if (q > p) {
-
-        q--;
-        resetLaser();
-    }
-}
-
-// ======================================================
-// CONTROLES TECLADO
-// ======================================================
-document.addEventListener("keydown", (event) => {
-
-    if (event.key === "ArrowRight") {
-        increaseP();
-    }
-
-    if (event.key === "ArrowLeft") {
-        decreaseP();
-    }
-
-    if (event.key === "ArrowUp") {
-        increaseQ();
-    }
-
-    if (event.key === "ArrowDown") {
-        decreaseQ();
-    }
-});
-
-// ======================================================
-// LOOP
-// ======================================================
-function animate() {
-
-    requestAnimationFrame(animate);
-
-    // ==================================================
-    // MOVIMENTO
-    // ==================================================
-    points.push([x, y]);
-
-    x += dx;
-    y += dy;
-
-    // ==================================================
-    // LIMITES
-    // ==================================================
-    const leftWall = ROOM_X + WALL_OFFSET;
-    const rightWall = ROOM_X + ROOM_SIZE - WALL_OFFSET;
-
-    const topWall = ROOM_Y + WALL_OFFSET;
-    const bottomWall = ROOM_Y + ROOM_SIZE - WALL_OFFSET;
-
-    // ==================================================
-    // REFLEXÕES
-    // ==================================================
-    let collided = false;
-
-    // Esquerda
-    if (x <= leftWall) {
-
-        x = leftWall;
+    if (laserX <= offset) {
+        laserX = offset;
         dx *= -1;
-
-        collided = true;
+        hitVertical = true;
     }
 
-    // Direita
-    if (x >= rightWall) {
-
-        x = rightWall;
+    if (laserX >= offset + size) {
+        laserX = offset + size;
         dx *= -1;
-
-        collided = true;
+        hitVertical = true;
     }
 
-    // Cima
-    if (y <= topWall) {
-
-        y = topWall;
+    if (laserY <= offset) {
+        laserY = offset;
         dy *= -1;
-
-        collided = true;
+        hitHorizontal = true;
     }
 
-    // Baixo
-    if (y >= bottomWall) {
-
-        y = bottomWall;
+    if (laserY >= offset + size) {
+        laserY = offset + size;
         dy *= -1;
-
-        collided = true;
+        hitHorizontal = true;
     }
 
-    // Conta apenas UMA reflexão
-    if (collided) {
-        reflections++;
-    }
+    // canto = 2 reflexões
+    if (hitVertical) reflections++;
+    if (hitHorizontal) reflections++;
+}
 
-    // ==================================================
-    // PREVISÃO MATEMÁTICA
-    // ==================================================
+function draw() {
 
-    // IMPORTANTÍSSIMO:
-    //
-    // A fórmula clássica:
-    //
-    // p + q - 1
-    //
-    // conta o número de colisões
-    // ATÉ atingir um vértice no plano desdobrado.
-    //
-    // Nosso simulador:
-    // - começa no centro;
-    // - conta colisões reais;
-    // - trata canto como UMA colisão.
-    //
-    // Então a convenção consistente aqui é:
-    //
-    // p + q - 1
-    //
-    // exceto no caso diagonal p=q.
-    //
-    let predictedReflections;
-
-    if (p === q) {
-
-        predictedReflections = 1;
-
-    } else {
-
-        predictedReflections = p + q;
-    }
-
-    // ==================================================
-    // DESENHO
-    // ==================================================
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Header
-    ctx.fillStyle = "rgb(25,25,25)";
-    ctx.fillRect(0, 0, canvas.width, 170);
-
-    // Sala
     ctx.strokeStyle = "white";
     ctx.lineWidth = 3;
 
-    ctx.strokeRect(
-        ROOM_X,
-        ROOM_Y,
-        ROOM_SIZE,
-        ROOM_SIZE
-    );
+    ctx.strokeRect(offset, offset, size, size);
 
-    // Centro
+    // centro
     ctx.fillStyle = "lime";
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trajetória
-    if (points.length > 1) {
+    // laser
+    ctx.fillStyle = "red";
 
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(laserX, laserY, 5, 0, Math.PI * 2);
+    ctx.fill();
 
-        ctx.beginPath();
+    const angleDeg =
+        Math.atan(xValue / yValue) * 180 / Math.PI;
 
-        ctx.moveTo(points[0][0], points[0][1]);
+    const predictedReflections = xValue + yValue;
 
-        for (let i = 1; i < points.length; i++) {
+    info.innerHTML = `
+    θ ≈ ${angleDeg.toFixed(3)}°<br>
+    tan(θ) = ${xValue}/${yValue}<br>
+    Previsão teórica: ${predictedReflections} reflexões<br>
+    Reflexões observadas: ${reflections}<br><br>
 
-            ctx.lineTo(
-                points[i][0],
-                points[i][1]
-            );
-        }
-
-        ctx.stroke();
-    }
-
-    // ==================================================
-    // TEXTOS
-    // ==================================================
-    ctx.fillStyle = "white";
-    ctx.font = "28px Arial";
-
-    // Razão
-    ctx.fillText(
-        `tan(theta) = ${p}/${q}`,
-        40,
-        50
-    );
-
-    // Ângulo
-    const angleDeg = (theta * 180 / Math.PI).toFixed(4);
-
-    ctx.fillText(
-        `Theta = ${angleDeg}°`,
-        320,
-        50
-    );
-
-    // Reflexões reais
-    ctx.fillText(
-        `Reflexoes reais = ${reflections}`,
-        600,
-        50
-    );
-
-    // Previsão
-    ctx.fillText(
-        `Previsao teorica = ${predictedReflections}`,
-        40,
-        100
-    );
-
-    // Controles
-    ctx.fillText(
-        `←→ muda p | ↑↓ muda q`,
-        320,
-        100
-    );
-
-    // Explicação
-    ctx.font = "20px Arial";
-    ctx.fillText(
-        `Só funciona na forma mais reduzida da fração p/q.`,
-        40,
-        140
-    );
-
+    A previsão funciona para x/y na forma reduzida.<br>
+    No vértice, contam-se duas reflexões simultâneas.
+    `;
 }
 
-animate();
+function loop() {
+
+    update();
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+loop();
 
 </script>
 
